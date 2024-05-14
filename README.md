@@ -78,7 +78,7 @@ changes:
 ```
 
 
-### Process Draft
+### [WIP] Process
 
 1. Export all collections
 1. Copy export
@@ -121,6 +121,29 @@ changes:
 - Python script create output folders (check for overwrite with --force)
 - Python script to load `change_list_path.yml` file with list of changes to be made like:
 - Python script to apply `change_list_path.yml` changes to given `EXPORT_PATH`
+
+
+## Notes
+
+- Deletes/Archives/Moves to Trash
+  - Objects cannot be deleted
+  - Objects can be archived (in Metabase v49 and lower)
+  - Objects can be moved to trash (in Metabase v50 and higher)
+  - If a source object is archived/moved to trash, it will be archived/moved to trash in the target (or created in the archive/trash if it does not exist)
+  - If a source object is created on the target and does not exist in the source, it will be unaffected (assuming there are no identity collisions)
+  - Archiving objects just changes the `archived` flag to `true`, but otherwise do not alter the object
+
+## Caveats
+- Entity IDs must be unique
+- Must handle nested dependencies
+- Segments and Metrics
+  - referred to by entity_id instead of name
+  - because in Databases folder
+- Filter IDs
+  - unsure how handled, but don't seem to collide when share the same identifier
+- Filenames ignored re: entity_ids and names
+- lookout for errors on "duplicated entity_ids"
+  - not sure when or why they occur
 
 
 ## Resources
