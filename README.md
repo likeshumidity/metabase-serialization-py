@@ -16,22 +16,29 @@ $ pdm install
 ## Usage
 
 ```bash
-$ ./pdm run metabase-serialization-cli.py ORIGINAL_EXPORT_ALL_COLLECTIONS.tgz ./OUTPUT_TARGET_PATH change_list.yml
-# OR create virtual environment, and run inside (re: bash/csh/zsh)
-$ ./pdm venv create serialization-environment
-$ eval $(pdm venv activate serialization-environment)
-(serialization-environment) $ ./metabase-serialization-cli.py ORIGINAL_EXPORT_ALL_COLLECTIONS.tgz ./OUTPUT_TARGET_PATH change_list.yml
+# See below examples for command prefixes  where `...` is shown.
+$ ... metabase-serialization-cli.py ORIGINAL_EXPORT_ALL_COLLECTIONS.tgz change_list.yml [./OUTPUT_TARGET_PATH]
 ```
 
 - `ORIGINAL_EXPORT_ALL_COLLECTIONS.tgz`
   - MUST EXPORT ALL COLLECTIONS.
   - Failure to do so may cause naming collisions or overwrite your data when you import the results.
-- `OUTPUT_TARGET_PATH`
+- `change_list.yml`
+  - Follows `change_list.yml` format described below.
+- `OUTPUT_TARGET_PATH` _optional_
   - Directory must exist.
   - Defaults to current working directory.
   - New sub-directory created with each run with a timestamp suffix.
-- `change_list.yml`
-  - Follows `change_list.yml` format described below.
+
+
+### Examples Usage
+```bash
+$ ./pdm run metabase-serialization-cli.py export-12345.tgz change_list.yml ./output
+# OR create, enter, and run inside a virtual environment (re: bash/csh/zsh)
+$ ./pdm venv create serialization-environment
+$ eval $(pdm venv activate serialization-environment)
+(serialization-environment) $ ./metabase-serialization-cli.py export-12345.tgz change_list.yml ./output
+```
 
 
 ### Format of `change_list.yml`
