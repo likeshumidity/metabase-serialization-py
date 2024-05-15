@@ -26,18 +26,20 @@ $ ... metabase-serialization-cli.py ORIGINAL_EXPORT_ALL_COLLECTIONS.tgz change_l
 - `change_list.yml`
   - Follows `change_list.yml` format described below.
 - `OUTPUT_TARGET_PATH` _optional_
-  - Directory must exist.
   - Defaults to current working directory.
+  - Directory must exist.
   - New sub-directory created with each run with a timestamp suffix.
 
 
 ### Examples Usage
 ```bash
-$ ./pdm run metabase-serialization-cli.py export-12345.tgz change_list.yml ./output
-# OR create, enter, and run inside a virtual environment (re: bash/csh/zsh)
-$ ./pdm venv create serialization-environment
+# Using pdm run
+$ pdm run metabase-serialization-cli.py export-12345.tgz change_list.yml ./output
+
+# Create, enter, and run inside a virtual environment (re: bash/csh/zsh)
+$ pdm venv create serialization-environment
 $ eval $(pdm venv activate serialization-environment)
-(serialization-environment) $ ./metabase-serialization-cli.py export-12345.tgz change_list.yml ./output
+(serialization-environment) $ ./src/metabase-serialization-cli.py export-12345.tgz change_list.yml ./output
 ```
 
 
@@ -75,6 +77,9 @@ changes:
           entity_id: collection_entity_id_1234
         to:
           entity_id: collection_entity_id_5678
+  - archive:
+      - collection: collection_entity_id_12345
+      - question: question_entity_id_12345
 ```
 
 
