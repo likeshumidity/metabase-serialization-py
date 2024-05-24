@@ -17,7 +17,7 @@ $ pdm install
 
 ```bash
 # See below examples for command prefixes  where `...` is shown.
-$ ... metabase-serialization-cli.py ORIGINAL_EXPORT_ALL_COLLECTIONS.tgz change_list.yml [./OUTPUT_TARGET_PATH]
+$ ... metabase-serialization-cli.py ORIGINAL_EXPORT_ALL_COLLECTIONS.tgz change_list.yml [--output_path ./OUTPUT_TARGET_PATH]
 ```
 
 - `ORIGINAL_EXPORT_ALL_COLLECTIONS.tgz`
@@ -34,12 +34,12 @@ $ ... metabase-serialization-cli.py ORIGINAL_EXPORT_ALL_COLLECTIONS.tgz change_l
 ### Examples Usage
 ```bash
 # Using pdm run
-$ pdm run metabase-serialization-cli.py export-12345.tgz change_list.yml ./output
+$ pdm run metabase-serialization-cli.py export-12345.tgz change_list.yml --output_path ./output
 
 # Create, enter, and run inside a virtual environment (re: bash/csh/zsh)
 $ pdm venv create serialization-environment
 $ eval $(pdm venv activate serialization-environment)
-(serialization-environment) $ ./src/metabase-serialization-cli.py export-12345.tgz change_list.yml ./output
+(serialization-environment) $ ./src/metabase-serialization-cli.py export-12345.tgz change_list.yml --output_path ./output
 ```
 
 
@@ -85,8 +85,7 @@ changes:
 
 ### [WIP] Process
 
-1. Export all collections
-1. Copy export
+1. Export all collections via API to tgz file
 1. Process changes
 	1. Untar/gzip
 	1. Verify input files exist
@@ -126,6 +125,7 @@ changes:
 - Python script create output folders (check for overwrite with --force)
 - Python script to load `change_list_path.yml` file with list of changes to be made like:
 - Python script to apply `change_list_path.yml` changes to given `EXPORT_PATH`
+- Add a flag to the change_list.yml to clear the contents (archive/move to trash) of the destination of contents prior to changes
 
 
 ## Notes

@@ -168,3 +168,8 @@ output/
 *.tgz
 *.tar.gz
 
+# Ingore do_not_commit/ folder (used in dev to contain sample data for testing)
+do_not_commit/
+
+
+
