@@ -85,13 +85,13 @@ changes:
 
 ### [WIP] Process
 
-1. Export all collections via API to tgz file
+1. [x] Export all collections via API to tgz file
 1. Process changes
-	1. Untar/gzip
-	1. Verify input files exist
-		1. tar/gzip export
-		1. change_list.yml
-		1. Target output folder
+	1. [x] Untar/gzip
+	1. [x] Verify input files exist
+		1. [x] tar/gzip export
+		1. [x] change_list.yml
+		1. [x] Target output folder
 	1. Index all entity_ids and names
 	1. Find relevant files based on change_list.yml
 		1. Examine the change list and trace dependencies
