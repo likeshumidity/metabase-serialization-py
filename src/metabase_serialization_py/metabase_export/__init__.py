@@ -37,7 +37,7 @@ def extract_metabase_metadata(file_data):
         # ('type', None),
     )
 
-    KNOWN_SERDES_META_MODELS = (
+    SERDES_META_MODELS = (
         'Action',
         'Card',
         'Collection',
@@ -57,7 +57,7 @@ def extract_metabase_metadata(file_data):
     # TODO: should get last???? item in list not first? (i.e. -1, not 0)
     serdes_metadata = None if file_data.get('serdes/meta', None) is None else file_data.get('serdes/meta', None)[0]
 
-    if detected_serdes_meta_model not in KNOWN_SERDES_META_MODELS:
+    if detected_serdes_meta_model not in SERDES_META_MODELS:
         LOGGER.warning(f'Found object of unknown type: {file_data}')
         LOGGER.warning(f'.. "type": {file_data.get('type', None)}')
         LOGGER.warning(f'.. "serdes/metadata": {serdes_metadata}')
@@ -68,10 +68,11 @@ def extract_metabase_metadata(file_data):
     metadata['serdes/meta.model'] = detected_serdes_meta_model
     # TODO: must handle multiple elements in serdes/meta.
 
-    if len(file_data.get('serdes/meta', [{}])) > 1:
-        import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
+    # if len(file_data.get('serdes/meta', [{}])) > 1:
+    #     import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
 
-    metadata['serdes/meta.id'] = file_data.get('serdes/meta', [{}])[0].get('id', None)
+    # metadata['serdes/meta.id'] = file_data.get('serdes/meta', [{}])[0].get('id', None)
+    metadata['serdes/meta.id'] = tuple([meta.get('id', None) for meta in file_data.get('serdes/meta', [{}])])
 
     for attribute_name, default_value in MB_SERIALIZATION_FILE_YAML_ATTRIBUTES:
         metadata[attribute_name] = file_data.get(attribute_name, default_value)
@@ -174,6 +175,7 @@ def serialization_export_loader(serialization_file_path):
 
 
 class MetabaseExport:
+    index = {}
     index_by_id = {}
     data_index_by_path = {}
 
@@ -196,10 +198,12 @@ class MetabaseExport:
     def __getattr__(self, search_name):
         """Looks up value of either entity_id or tuple of data path."""
 
-        if isinstance(search_name, tuple):
-            return self.data_index_by_path[search_name]
+        # if isinstance(search_name, tuple):
+        #     return self.data_index_by_path[search_name]
+        #
+        # return self.index_by_id[search_name]
 
-        return self.index_by_id[search_name]
+        return self.index[search_name]
 
 
     def create_entity_index_by_id(self):
