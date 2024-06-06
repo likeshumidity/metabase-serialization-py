@@ -3,8 +3,10 @@ import logging
 import os
 import hashlib
 
-from metabase_serialization_py.metabase_export import MetabaseExport
+from yaml.constructor import ConstructorError as ConstructorError_yaml
 
+from metabase_serialization_py.metabase_export import MetabaseExport
+from metabase_serialization_py.yaml import parse_yaml
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
@@ -24,7 +26,6 @@ def create_change_list(change_list_file_path, metabase_export):
     with open (change_list_file_path, 'r') as change_list_file:
         change_list = parse_yaml(change_list_file)
 
-    # TODO: create entity_id index from metabase_export
     # TODO: for each change in change list
     # TODO: traverse tree of change and dependent changes
     # TODO: validate that related entity keys exist
