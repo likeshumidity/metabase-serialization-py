@@ -22,6 +22,7 @@ from metabase_serialization_py.yaml import parse_yaml
 # TODO: handle update card
 # TODO: handle update model
 # TODO: handle update dashboard
+# TODO: handle update collection
 
 
 class ChangeRequests:
