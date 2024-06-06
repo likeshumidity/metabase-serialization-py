@@ -1,10 +1,12 @@
 """Helpers for working with Metabase Serialization Exports."""
 import logging
 import tarfile
-import yaml
+
+from yaml.constructor import ConstructorError as ConstructorError_yaml
 
 from metabase_serialization_py.memory_usage import get_memory_usage
 from metabase_serialization_py.hashing import generate_hash_for_object
+from metabase_serialization_py.yaml import parse_yaml, Loader
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
@@ -14,11 +16,8 @@ logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 # TODO: ignore archived content, take CLI flag to un-ignore archived content
 # TODO: check serdes/meta.id == file_data['entity_id']
 # TODO: process changes in order of precedence (delete first, then rename, then move, then copy, etc.)
+# TODO: fix assumption of only one item in list re: serdes/meta
 
-
-# YAML Loader updates for Metabase YAML
-class Loader(yaml.SafeLoader):
-    pass
 
 # Disables '=' loader
 Loader.yaml_implicit_resolvers.pop('=')
@@ -31,6 +30,7 @@ def extract_metabase_metadata(file_data):
         ('name', None),
         ('display_name', None),
         ('archived', None),  # TODO: archive or archived? and how will change in v1.50.x when move to trash instead of archive?
+        ('entity_type', None),
         # ('active', None),
         # ('created_at', None),
         # ('serdes/meta', None),
@@ -43,47 +43,42 @@ def extract_metabase_metadata(file_data):
         'Collection',
         'Dashboard',
         'Database',
+        'Field',
         'Metric',
         'NativeQuerySnippet',
         'Segment',
+        'Table',
         'Timeline',
     )
 
     metadata = {}
 
-    # TODO: fix assumption of only one item in list re: serdes/meta
-    detected_serdes_meta_model = file_data.get('serdes/meta', [{}])[0].get('model', None)
+    detected_serdes_meta_model = file_data.get('serdes/meta', [{}])[-1].get('model', None)
 
-    # TODO: should get last???? item in list not first? (i.e. -1, not 0)
-    serdes_metadata = None if file_data.get('serdes/meta', None) is None else file_data.get('serdes/meta', None)[0]
+    serdes_metadata = None if file_data.get('serdes/meta', None) is None else file_data.get('serdes/meta', None)[-1]
 
     if detected_serdes_meta_model not in SERDES_META_MODELS:
         LOGGER.warning(f'Found object of unknown type: {file_data}')
         LOGGER.warning(f'.. "type": {file_data.get('type', None)}')
         LOGGER.warning(f'.. "serdes/metadata": {serdes_metadata}')
 
-        # import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
+        import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
 
 
     metadata['serdes/meta.model'] = detected_serdes_meta_model
-    # TODO: must handle multiple elements in serdes/meta.
 
-    # if len(file_data.get('serdes/meta', [{}])) > 1:
-    #     import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
+    if len(file_data.get('serdes/meta', [{}])) > 1:
+        metadata['serdes/meta.id'] = tuple([meta.get('id', None) for meta in file_data.get('serdes/meta', [{}])])
+    else:
+        metadata['serdes/meta.id'] = file_data.get('serdes/meta', [{}])[0].get('id', None)
 
-    # metadata['serdes/meta.id'] = file_data.get('serdes/meta', [{}])[0].get('id', None)
-    metadata['serdes/meta.id'] = tuple([meta.get('id', None) for meta in file_data.get('serdes/meta', [{}])])
+    if metadata['serdes/meta.id'] is None or (not isinstance(metadata['serdes/meta.id'], str) and not isinstance(metadata['serdes/meta.id'], tuple)):
+        import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
 
     for attribute_name, default_value in MB_SERIALIZATION_FILE_YAML_ATTRIBUTES:
         metadata[attribute_name] = file_data.get(attribute_name, default_value)
 
     return metadata
-
-
-def parse_yaml(file_object):
-    """Return parsed YAML as dict from a file_object."""
-
-    return yaml.load(file_object, Loader=Loader)
 
 
 def load_serialization_tgz_contents(tgz_path):
@@ -95,7 +90,7 @@ def load_serialization_tgz_contents(tgz_path):
         for member in tar_file.getmembers():
             try:
                 file_type = 'file' if member.isfile() else ('dir' if member.isdir() else 'not file or dir')
-                file_data = None if file_type != 'file' else parse_yaml(tar_file.extractfile(member.name))
+                file_data = None if file_type != 'file' else parse_yaml(tar_file.extractfile(member.name), Loader)
 
                 yield (
                     member.name,
@@ -103,7 +98,7 @@ def load_serialization_tgz_contents(tgz_path):
                     file_type,
                     file_data,
                 )
-            except yaml.constructor.ConstructorError as error:
+            except ConstructorError_yaml as error:
                 # import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
                 yield (
                     member.name,
@@ -175,7 +170,6 @@ def serialization_export_loader(serialization_file_path):
 
 
 class MetabaseExport:
-    index = {}
     index_by_id = {}
     data_index_by_path = {}
 
@@ -198,13 +192,10 @@ class MetabaseExport:
     def __getattr__(self, search_name):
         """Looks up value of either entity_id or tuple of data path."""
 
-        # if isinstance(search_name, tuple):
-        #     return self.data_index_by_path[search_name]
-        #
-        # return self.index_by_id[search_name]
+        if isinstance(search_name, tuple):
+            return self.data_index_by_path[search_name]
 
-        return self.index[search_name]
-
+        return self.index_by_id[search_name]
 
     def create_entity_index_by_id(self):
         """Creates index of entity ids, references, and reference paths from export_data."""
@@ -227,7 +218,7 @@ class MetabaseExport:
             # Find external references and add to index
             self.update_entity_references(file_data, member_name, serdes_meta_id, metadata)
 
-        import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
+        # import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
 
     def add_entity_to_index_by_id(self,  serdes_meta_id, i, member_name):
         """Create entity entry in index by id."""
@@ -262,6 +253,57 @@ class MetabaseExport:
 
         if file_data['parent_id'] is not None:
             self.add_entity_reference_to_index_by_id(file_data['parent_id'], 'Collection', 'parent_id', serdes_meta_id, member_name)
+
+    def update_entity_references_timeline(self, file_data, serdes_meta_id, member_name):
+        """Updates Timeline entity indices by adding external references found in file_data to referenced entities."""
+
+        if file_data['collection_id']:
+            self.add_entity_reference_to_index_by_id(file_data['collection_id'], 'Timeline', 'collection_id', serdes_meta_id, member_name)
+
+    def update_entity_references_action(self, file_data, serdes_meta_id, member_name):
+        """Updates Action entity indices by adding external references found in file_data to referenced entities."""
+
+        if file_data['model_id']:
+            self.add_entity_reference_to_index_by_id(file_data['model_id'], 'Action', 'model_id', serdes_meta_id, member_name)
+
+    def update_entity_references_field(self, file_data, serdes_meta_id, member_name):
+        """Updates Field entity indices by adding external references found in file_data to referenced entities."""
+
+        if file_data['table_id']:
+            self.add_entity_reference_to_data_index_by_path(tuple(file_data['table_id']), 'Field', 'table_id', serdes_meta_id, member_name)
+
+        for i, serdes_meta in enumerate(file_data['serdes/meta'][:-1]):
+            path_reference = tuple([meta['id'] for meta in file_data['serdes/meta']])[:i + 1]
+            # TODO: may need to refactor to be .path_reference instead of .id
+            self.add_entity_reference_to_data_index_by_path(path_reference, 'Field', f'serdes/meta[{i}].id', serdes_meta_id, member_name)
+
+    def update_entity_references_table(self, file_data, serdes_meta_id, member_name):
+        """Updates Table entity indices by adding external references found in file_data to referenced entities."""
+
+        if file_data['db_id']:
+            self.add_entity_reference_to_data_index_by_path(tuple(file_data['db_id']), 'Table', 'db_id', serdes_meta_id, member_name)
+
+        for i, serdes_meta in enumerate(file_data['serdes/meta'][:-1]):
+            path_reference = tuple([meta['id'] for meta in file_data['serdes/meta']])[:i + 1]
+            # TODO: may need to refactor to be .path_reference instead of .id
+            self.add_entity_reference_to_data_index_by_path(path_reference, 'Table', f'serdes/meta[{i}].id', serdes_meta_id, member_name)
+
+    def update_entity_references_metric(self, file_data, serdes_meta_id, member_name):
+        """Updates Metric entity indices by adding external references found in file_data to referenced entities."""
+
+
+        if file_data['table_id']:
+            self.add_entity_reference_to_data_index_by_path(tuple(file_data['table_id']), 'Metric', 'table_id', serdes_meta_id, member_name)
+        else:
+            self.add_entity_reference_to_data_index_by_path(tuple(file_data['definition']['source-table']), 'Metric', 'definition.source-table', serdes_meta_id, member_name)
+
+    def update_entity_references_segment(self, file_data, serdes_meta_id, member_name):
+        """Updates Segment entity indices by adding external references found in file_data to referenced entities."""
+
+        if file_data['table_id']:
+            self.add_entity_reference_to_data_index_by_path(tuple(file_data['table_id']), 'Segment', 'table_id', serdes_meta_id, member_name)
+        else:
+            self.add_entity_reference_to_data_index_by_path(tuple(file_data['definition']['source-table']), 'Segment', 'definition.source-table', serdes_meta_id, member_name)
 
     def update_entity_references_dashboard(self, file_data, serdes_meta_id, member_name):
         """Updates Dashboard entity indices by adding external references found in file_data to referenced entities."""
@@ -416,34 +458,57 @@ class MetabaseExport:
     def update_entity_references(self, file_data, member_name, serdes_meta_id, metadata):
         """Updates entity index by id adding external references found in file_data to referenced entities."""
 
-        if metadata['serdes/meta.model'] == 'Collection':
-            self.update_entity_references_collection(file_data, serdes_meta_id, member_name)
+        # TODO: refactor all of these `self.update_entity_references_xyz` methods, lots of repeated code
+        ENTITY_MODELS = {
+            'Collection': self.update_entity_references_collection,
+            'Card': self.update_entity_references_card,
+            'Dashboard': self.update_entity_references_dashboard,
+            'Timeline': self.update_entity_references_timeline,
+            'Action': self.update_entity_references_action,
+            'Field': self.update_entity_references_field,
+            'Table': self.update_entity_references_table,
+            'Metric': self.update_entity_references_metric,
+            'Segment': self.update_entity_references_segment,
+        }
 
-        if metadata['serdes/meta.model'] == 'Dashboard':
-            self.update_entity_references_dashboard(file_data, serdes_meta_id, member_name)
+        ENTITY_MODELS_NO_EXTERNAL_REFERENCES = (
+            'NativeQuerySnippet',
+            'Database',
+        )
 
-        if metadata['serdes/meta.model'] == 'Card':
-            self.update_entity_references_card(file_data, serdes_meta_id, member_name)
+        serdes_meta_model = metadata['serdes/meta.model']
 
-        # if metadata['serdes/meta.model'] not in ('NativeQuerySnippet', 'Collection', 'Dashboard', ):
+        if serdes_meta_model in ENTITY_MODELS_NO_EXTERNAL_REFERENCES:
+            return
 
-        if metadata['serdes/meta.model'] in ('Card', ):
+        entity_model_updater = ENTITY_MODELS.get(serdes_meta_model, None)
+
+        if entity_model_updater is None:
+            import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
+
+        entity_model_updater(file_data, serdes_meta_id, member_name)
+
+        if serdes_meta_model in ('Card', ):  # TODO: REMOVE after debugging
             # Skip entities with no external references.
-            LOGGER.debug('-------------------------------------')
-            LOGGER.debug('-------------------------------------')
-            LOGGER.debug(member_name)
-            LOGGER.debug(serdes_meta_id)
-            LOGGER.debug(metadata['serdes/meta.model'])
+            # LOGGER.debug('-------------------------------------')
+            # LOGGER.debug('-------------------------------------')
+            # LOGGER.debug(member_name)
+            # LOGGER.debug(serdes_meta_id)
+            # LOGGER.debug(metadata['serdes/meta.model'])
             # LOGGER.debug(file_data)
 
             if file_data['embedding_params'] or file_data['parameter_mappings']:  # TODO: REMOVE this line after debugging
                 import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
+
 
     def add_entity_reference_to_index_by_id(self, reference_entity_id, entity_model, relationship, serdes_meta_id, member_name):
         """Adds entity reference to entity index by id."""
 
         if reference_entity_id is None:
             LOGGER.error(f'Cannot add entity id reference to "{relationship}" for None in {member_name}.')
+            import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
+
+        if isinstance(reference_entity_id, list):
             import pdb; pdb.set_trace();  # TODO: REMOVE after debugging
 
         if reference_entity_id not in self.index_by_id:
