@@ -1,4 +1,4 @@
-# metabase-serialization-py: CLI to modify Metabase Serialization Exports/Imports
+# [WIP] metabase-serialization-py: CLI to modify Metabase Serialization Exports/Imports
 
 ## Dependencies
 - Python
@@ -43,43 +43,93 @@ $ eval $(pdm venv activate serialization-environment)
 ```
 
 
-### Format of `change_list.yml`
+### Format of `change_list.yml` with Examples
+
+#### Copying a collection and its contents and changing database references of contents
+
+
+#### Copying a dashboard and its underlying content and changing schema references of contents
+
+
+#### Copying a dashboard and its underlying content and changing table references of contents
+
+
+#### Copying a card(Question or Model) and database references of contents
+
+
+#### Replacing a collection and its contents and changing database references of contents
+
+
+#### Replacing a dashboard and its underlying content and changing schema references of contents
+
+
+#### Replacing a dashboard and its underlying content and changing table references of contents
+
+
+#### Replacing a card(Question or Model) and database references of contents
 
 ```yaml
 # change_list.yml
+# TODO: Add JSON Schema spec for this YAML
+# TODO: handle copy model
+# TODO: handle copy dashboard
+# TODO: handle copy collection
+# TODO: handle copy dependent content
+# TODO: handle archive collection contents before update
+# TODO: handle replace card
+# TODO: handle replace model
+# TODO: handle replace dashboard
+# TODO: handle replace collection
+# TODO: handle update database
+# TODO: handle update schema
+# TODO: handle update table
+# TODO: handle update field
+# TODO: handle update card
+# TODO: handle update model
+# TODO: handle update dashboard
 changes:
-  # use a `create` clause if the target collection does not exist
+  # use a `copy` clause if the target collection does not exist
   # you can leave `to` clauses blank if you want them to be generated
   # a fatal error will occur if there are any naming collisions detected
-  - create: # checks for naming collisions and does not overwrite
-      database:
-        from:
-          name: name_12345
-        to:
-          name: name_56789
-      collection:
-        from:
-          entity_id: collection_entity_id_1234
-        to:
-          entity_id: collection_entity_id_5678
+  # checks for naming collisions and does not overwrite
+  - create: # EXAMPLE: copying a collection
+      source:
+        entity_id: collection_entity_id_1234
+      changes:
+        collection_id: collection_entity_id_5678
+        database_id: 'Sample Database 2'
+        dataset_query:
+          database: 'Sample Database 2'
+  - create: # EXAMPLE: copying a card
+      source:
+        entity_id: card_entity_id_12345
+      changes:
+        collection_id: collection_entity_id_5678
+        database_id: 'Sample Database 2'
+        dataset_query:
+          database: 'Sample Database 2'
   # use a `replace` clause if the target collection does not exist
   # ?? existing contents in the collection will be unaltered unless they are included in the export and change list
   # every object`to` must be specified
   # a warning will occur if there are any naming collisions detected in the `to` clause
-  - replace: # warns on naming collisions but does overwrite
-      database:
-        from:
-          name: name_12345
-        to:
-          name: name_56789
-      collection:
-        from:
-          entity_id: collection_entity_id_1234
-        to:
-          entity_id: collection_entity_id_5678
-  - archive:
-      - collection: collection_entity_id_12345
-      - question: question_entity_id_12345
+  # warns on naming collisions but does overwrite
+  - replace:
+      target:
+        entity_id: collection_entity_id_5678
+      source:
+        entity_id: collection_entity_id_1234
+      changes:
+        authority_level: official
+        name: 'zendesk issues - original'
+        slug: zendesk_issues_original
+      options:
+        archive_existing_content: True # archives any content in target that is not included in source
+# TODO: handle copy card
+  - update: # Example: archiving content
+      target:
+        entity_id: question_entity_id_12345
+      changes:
+        archived: True
 ```
 
 
@@ -117,14 +167,10 @@ changes:
 
 ## TODO
 - export serialization files via API curl from localhost test environment
-- Python script open and load to memory single serialization file from given `EXPORT_PATH`
-- Python script open and load to memory all serialization files in given `EXPORT_PATH`
-  - list directory contents
-  - load each file
-- Python script create output file (check for overwrite with --force)
-- Python script create output folders (check for overwrite with --force)
 - Python script to load `change_list_path.yml` file with list of changes to be made like:
 - Python script to apply `change_list_path.yml` changes to given `EXPORT_PATH`
+- Python script create output file (check for overwrite with --force)
+- Python script create output folders (check for overwrite with --force)
 - Add a flag to the change_list.yml to clear the contents (archive/move to trash) of the destination of contents prior to changes
 
 

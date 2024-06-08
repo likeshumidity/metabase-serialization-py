@@ -12,11 +12,10 @@ LOGGER = logging.getLogger(__name__)
 logging.basicConfig(encoding='utf-8', level=logging.DEBUG)
 
 # TODOs
-# TODO: replace references to "member" with something more clear like "archive member" or "exported object"
+# TODO: replace references to "member" with something more clear like "archive member"
 # TODO: ignore archived content, take CLI flag to un-ignore archived content
 # TODO: check serdes/meta.id == file_data['entity_id']
 # TODO: process changes in order of precedence (delete first, then rename, then move, then copy, etc.)
-# TODO: fix assumption of only one item in list re: serdes/meta
 
 
 # Disables '=' loader
@@ -31,10 +30,10 @@ def extract_metabase_metadata(file_data):
         ('display_name', None),
         ('archived', None),  # TODO: archive or archived? and how will change in v1.50.x when move to trash instead of archive?
         ('entity_type', None),
-        # ('active', None),
-        # ('created_at', None),
+        ('type', None),
+        ('active', None),
+        ('created_at', None),
         # ('serdes/meta', None),
-        # ('type', None),
     )
 
     SERDES_META_MODELS = (
